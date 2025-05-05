@@ -11,6 +11,8 @@ class CharacterListScreen extends StatefulWidget {
 }
 
 class _CharacterListScreenState extends State<CharacterListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  
   @override
   void initState() {
     super.initState();
@@ -19,57 +21,137 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
       Provider.of<mainViewModel>(context, listen: false).fetchCharacters()
     );
   }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Personajes de Harry Potter'),
       ),
-      body: Consumer<mainViewModel>(
-        builder: (context, viewModel, child) {
-          // Mostrar diferentes widgets dependiendo del estado
-          switch (viewModel.state) {
-            case ViewState.loading:
-              return const Center(child: CircularProgressIndicator());
-            
-            case ViewState.error:
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error: ${viewModel.errorMessage}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
+      body: Column(
+        children: [
+          // Campo de búsqueda
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Consumer<mainViewModel>(
+              builder: (context, viewModel, child) {
+                return TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar personaje por nombre...',
+                    prefixIcon: Icon(Icons.search, color: theme.colorScheme.primary),
+                    suffixIcon: viewModel.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              viewModel.clearSearch();
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => viewModel.fetchCharacters(),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              );
-            
-            case ViewState.empty:
-              return const Center(
-                child: Text('No se encontraron personajes'),
-              );
-            
-            case ViewState.success:
-              return ListView.builder(
-                padding: const EdgeInsets.all(8),
-                itemCount: viewModel.characters.length,
-                itemBuilder: (context, index) {
-                  final character = viewModel.characters[index];
-                  return CharacterCard(character: character);
-                },
-              );
-          }
-        },
+                  ),
+                  onChanged: (value) {
+                    viewModel.searchCharacters(value);
+                  },
+                );
+              },
+            ),
+          ),
+          
+          // Lista de personajes
+          Expanded(
+            child: Consumer<mainViewModel>(
+              builder: (context, viewModel, child) {
+                // Mostrar diferentes widgets dependiendo del estado
+                switch (viewModel.state) {
+                  case ViewState.loading:
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: theme.colorScheme.primary,
+                      ),
+                    );
+                  
+                  case ViewState.error:
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 60, color: theme.colorScheme.error),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error: ${viewModel.errorMessage}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: theme.colorScheme.error),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => viewModel.fetchCharacters(),
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+                    );
+                  
+                  case ViewState.empty:
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
+                          viewModel.searchQuery.isNotEmpty
+                            ? Text(
+                                'No se encontraron resultados para "${viewModel.searchQuery}"',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 16,
+                                ),
+                              )
+                            : Text(
+                                'No se encontraron personajes',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 16,
+                                ),
+                              ),
+                          if (viewModel.searchQuery.isNotEmpty)
+                            TextButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                viewModel.clearSearch();
+                              },
+                              child: const Text('Limpiar búsqueda'),
+                            ),
+                        ],
+                      ),
+                    );
+                  
+                  case ViewState.success:
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: viewModel.filteredCharacters.length,
+                      itemBuilder: (context, index) {
+                        final character = viewModel.filteredCharacters[index];
+                        return CharacterCard(character: character);
+                      },
+                    );
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -82,9 +164,11 @@ class CharacterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
@@ -98,8 +182,9 @@ class CharacterCard extends StatelessWidget {
                   // Nombre del personaje
                   Text(
                     character.name,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: getHouseColor(character.house, theme),
                     ),
                   ),
                   const Divider(),
@@ -128,11 +213,14 @@ class CharacterCard extends StatelessWidget {
                   width: 200,
                   height: 200,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 2),
+                    border: Border.all(
+                      color: getHouseColor(character.house, theme),
+                      width: 3,
+                    ),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(5),
                     child: Image.network(
                       character.image,
                       width: 500,
@@ -142,7 +230,7 @@ class CharacterCard extends StatelessWidget {
                         width: 500,
                         height: 500,
                         color: Colors.grey[300],
-                        child: const Icon(Icons.broken_image, size: 60),
+                        child: Icon(Icons.broken_image, size: 60, color: Colors.grey[500]),
                       ),
                       loadingBuilder: (ctx, child, loadingProgress) {
                         if (loadingProgress == null) return child;
@@ -150,8 +238,14 @@ class CharacterCard extends StatelessWidget {
                           width: 500,
                           height: 500,
                           color: Colors.grey[200],
-                          child: const Center(
-                            child: CircularProgressIndicator(),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded / 
+                                      (loadingProgress.expectedTotalBytes ?? 1)
+                                  : null,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
                         );
                       },
@@ -164,6 +258,22 @@ class CharacterCard extends StatelessWidget {
       ),
     );
   }
+  
+  // Función para obtener el color según la casa de Hogwarts
+  Color getHouseColor(String house, ThemeData theme) {
+    switch (house.toLowerCase()) {
+      case 'gryffindor':
+        return Colors.red[700] ?? Colors.red;
+      case 'slytherin':
+        return Colors.green[800] ?? Colors.green;
+      case 'ravenclaw':
+        return Colors.blue[800] ?? Colors.blue;
+      case 'hufflepuff':
+        return Colors.amber[700] ?? Colors.amber;
+      default:
+        return theme.colorScheme.primary;
+    }
+  }
 }
 
 class InfoRow extends StatelessWidget {
@@ -174,6 +284,8 @@ class InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -183,9 +295,9 @@ class InfoRow extends StatelessWidget {
             width: 150,
             child: Text(
               '$title:',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: theme.colorScheme.secondary,
               ),
             ),
           ),
@@ -193,7 +305,7 @@ class InfoRow extends StatelessWidget {
             child: Text(
               value.isEmpty ? 'NaN' : value,
               style: TextStyle(
-                color: value.isEmpty ? Colors.red : Colors.black,
+                color: value.isEmpty ? theme.colorScheme.error : Colors.black87,
               ),
             ),
           ),

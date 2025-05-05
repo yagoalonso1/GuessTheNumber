@@ -20,6 +20,14 @@ class mainViewModel extends ChangeNotifier {
   // Lista de todos los personajes
   List<Character> _characters = [];
   List<Character> get characters => _characters;
+  
+  // Lista de personajes filtrados para la búsqueda
+  List<Character> _filteredCharacters = [];
+  List<Character> get filteredCharacters => _filteredCharacters;
+  
+  // Texto de búsqueda actual
+  String _searchQuery = '';
+  String get searchQuery => _searchQuery;
 
   // Mensaje de error
   String _errorMessage = '';
@@ -37,6 +45,7 @@ class mainViewModel extends ChangeNotifier {
 
     try {
       _characters = await _apiService.getCharacters();
+      _filteredCharacters = _characters; // Inicialmente todos los personajes
 
       if (_characters.isEmpty) {
         _setState(ViewState.empty);
@@ -47,5 +56,39 @@ class mainViewModel extends ChangeNotifier {
       _errorMessage = 'Error al cargar los personajes: ${e.toString()}';
       _setState(ViewState.error);
     }
+  }
+  
+  // Método para buscar personajes por nombre
+  void searchCharacters(String query) {
+    _searchQuery = query;
+    
+    if (query.isEmpty) {
+      _filteredCharacters = _characters;
+    } else {
+      _filteredCharacters = _characters.where((character) => 
+        character.name.toLowerCase().contains(query.toLowerCase())).toList();
+    }
+    
+    if (_filteredCharacters.isEmpty && _characters.isNotEmpty) {
+      _setState(ViewState.empty);
+    } else if (_characters.isNotEmpty) {
+      _setState(ViewState.success);
+    }
+    
+    notifyListeners();
+  }
+  
+  // Método para limpiar la búsqueda
+  void clearSearch() {
+    _searchQuery = '';
+    _filteredCharacters = _characters;
+    
+    if (_characters.isEmpty) {
+      _setState(ViewState.empty);
+    } else {
+      _setState(ViewState.success);
+    }
+    
+    notifyListeners();
   }
 }
