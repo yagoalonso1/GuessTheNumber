@@ -1,3 +1,4 @@
+// clase que contiene los atributos de un personaje;
 class Character {
   final String name;
   final String species;
@@ -11,20 +12,21 @@ class Character {
   final bool alive;
   final String image;
 
+  // Constructor de la clase Character, todos los atributos son obligatorios
   Character({
-    required this.name,
-    required this.species,
-    required this.house,
-    required this.gender,
-    required this.dateOfBirth,
-    required this.wizard,
-    required this.ancestry,
-    required this.hogwartsStudent,
-    required this.hogwartsStaff,
-    required this.alive,
-    required this.image,
+    required this.name, // nombre
+    required this.species, // especie
+    required this.house, // casa
+    required this.gender, // género
+    required this.dateOfBirth, // fecha de nacimiento
+    required this.wizard, // mago
+    required this.ancestry, // ascendencia
+    required this.hogwartsStudent, // es estudiante de Hogwarts?
+    required this.hogwartsStaff, // personal de Hogwarts?
+    required this.alive, // está vivo?
+    required this.image, // imagen
   });
-
+  // Método para crear una instancia de Character a partir de un mapa JSON
   factory Character.fromJson(Map<String, dynamic> json) {
     return Character(
       name: json['name'] ?? '',
@@ -40,7 +42,7 @@ class Character {
       image: json['image'] ?? '',
     );
   }
-
+  // Método para convertir una instancia de Character a un mapa JSON (para el extra de crear un personaje)
   Map<String, dynamic> toJson() {
     return {
       'name': name,
@@ -56,4 +58,4 @@ class Character {
       'image': image,
     };
   }
-} 
+}
