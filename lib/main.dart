@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => mainViewModel(),
       child: MaterialApp(
-        title: 'Harry Potter API',
+        title: 'Harry Potter\'s CharactherHarry API',
         theme: ThemeData(
           primarySwatch: Colors.blue,
           visualDensity: VisualDensity.adaptivePlatformDensity,

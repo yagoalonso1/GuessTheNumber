@@ -11,6 +11,8 @@ class CharacterListScreen extends StatefulWidget {
 }
 
 class _CharacterListScreenState extends State<CharacterListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  
   @override
   void initState() {
     super.initState();
@@ -19,6 +21,12 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
       Provider.of<mainViewModel>(context, listen: false).fetchCharacters()
     );
   }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,50 +34,108 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
       appBar: AppBar(
         title: const Text('Personajes de Harry Potter'),
       ),
-      body: Consumer<mainViewModel>(
-        builder: (context, viewModel, child) {
-          // Mostrar diferentes widgets dependiendo del estado
-          switch (viewModel.state) {
-            case ViewState.loading:
-              return const Center(child: CircularProgressIndicator());
-            
-            case ViewState.error:
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error: ${viewModel.errorMessage}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
+      body: Column(
+        children: [
+          // Campo de búsqueda
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Consumer<mainViewModel>(
+              builder: (context, viewModel, child) {
+                return TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar personaje por nombre...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: viewModel.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              viewModel.clearSearch();
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => viewModel.fetchCharacters(),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              );
-            
-            case ViewState.empty:
-              return const Center(
-                child: Text('No se encontraron personajes'),
-              );
-            
-            case ViewState.success:
-              return ListView.builder(
-                padding: const EdgeInsets.all(8),
-                itemCount: viewModel.characters.length,
-                itemBuilder: (context, index) {
-                  final character = viewModel.characters[index];
-                  return CharacterCard(character: character);
-                },
-              );
-          }
-        },
+                  ),
+                  onChanged: (value) {
+                    viewModel.searchCharacters(value);
+                  },
+                );
+              },
+            ),
+          ),
+          
+          // Lista de personajes
+          Expanded(
+            child: Consumer<mainViewModel>(
+              builder: (context, viewModel, child) {
+                // Mostrar diferentes widgets dependiendo del estado
+                switch (viewModel.state) {
+                  case ViewState.loading:
+                    return const Center(child: CircularProgressIndicator());
+                  
+                  case ViewState.error:
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error: ${viewModel.errorMessage}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => viewModel.fetchCharacters(),
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+                    );
+                  
+                  case ViewState.empty:
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.search_off, size: 60, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          viewModel.searchQuery.isNotEmpty
+                            ? Text(
+                                'No se encontraron resultados para "${viewModel.searchQuery}"',
+                                textAlign: TextAlign.center,
+                              )
+                            : const Text('No se encontraron personajes'),
+                          if (viewModel.searchQuery.isNotEmpty)
+                            TextButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                viewModel.clearSearch();
+                              },
+                              child: const Text('Limpiar búsqueda'),
+                            ),
+                        ],
+                      ),
+                    );
+                  
+                  case ViewState.success:
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: viewModel.filteredCharacters.length,
+                      itemBuilder: (context, index) {
+                        final character = viewModel.filteredCharacters[index];
+                        return CharacterCard(character: character);
+                      },
+                    );
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
