@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'model/character_view_model.dart';
+import 'viewmodel/viewmodel.dart';
 import 'view/character_list_screen.dart';
 
 void main() {
@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => CharacterViewModel(),
+      create: (_) => mainViewModel(),
       child: MaterialApp(
         title: 'Harry Potter API',
         theme: ThemeData(

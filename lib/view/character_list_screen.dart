@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../model/character.dart';
-import '../model/character_view_model.dart';
+import '../viewmodel/viewmodel.dart';
 
 class CharacterListScreen extends StatefulWidget {
   const CharacterListScreen({Key? key}) : super(key: key);
@@ -16,7 +16,7 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
     super.initState();
     // Cargar los personajes al iniciar la pantalla
     Future.microtask(() => 
-      Provider.of<CharacterViewModel>(context, listen: false).fetchCharacters()
+      Provider.of<mainViewModel>(context, listen: false).fetchCharacters()
     );
   }
 
@@ -26,7 +26,7 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
       appBar: AppBar(
         title: const Text('Personajes de Harry Potter'),
       ),
-      body: Consumer<CharacterViewModel>(
+      body: Consumer<mainViewModel>(
         builder: (context, viewModel, child) {
           // Mostrar diferentes widgets dependiendo del estado
           switch (viewModel.state) {
@@ -87,60 +87,78 @@ class CharacterCard extends StatelessWidget {
       elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Imagen del personaje
+            // Información del personaje (a la izquierda)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Nombre del personaje
+                  Text(
+                    character.name,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Divider(),
+                  
+                  // Detalles del personaje
+                  InfoRow(title: 'Species', value: character.species),
+                  InfoRow(title: 'Gender', value: character.gender),
+                  InfoRow(title: 'House', value: character.house),
+                  InfoRow(title: 'Date Of Birth', value: character.dateOfBirth),
+                  InfoRow(title: 'is a Wizard or Bridge?', value: character.wizard ? 'Yes' : 'No'),
+                  InfoRow(title: 'Ancestry', value: character.ancestry),
+                  InfoRow(title: 'is Hogwart\'s Student?', value: character.hogwartsStudent ? 'Yes' : 'No'),
+                  InfoRow(title: 'is Hogwart\'s Staff?', value: character.hogwartsStaff ? 'Yes' : 'No'),
+                  InfoRow(title: 'Estado', value: character.alive ? 'Vivo' : 'Fallecido'),
+                ],
+              ),
+            ),
+            
+            // Espaciador
+            const SizedBox(width: 16),
+            
+            // Imagen del personaje (a la derecha)
             if (character.image.isNotEmpty)
               Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    character.image,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (ctx, error, _) => Container(
-                      height: 200,
-                      width: double.infinity,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.broken_image, size: 60),
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black, width: 2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(
+                      character.image,
+                      width: 500,
+                      height: 500,
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, error, _) => Container(
+                        width: 500,
+                        height: 500,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.broken_image, size: 60),
+                      ),
+                      loadingBuilder: (ctx, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          width: 500,
+                          height: 500,
+                          color: Colors.grey[200],
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      },
                     ),
-                    loadingBuilder: (ctx, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: 200,
-                        width: double.infinity,
-                        color: Colors.grey[200],
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    },
                   ),
                 ),
               ),
-            const SizedBox(height: 16),
-            
-            // Nombre del personaje
-            Text(
-              character.name,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Divider(),
-            
-            // Detalles del personaje
-            InfoRow(title: 'Especie', value: character.species),
-            InfoRow(title: 'Género', value: character.gender),
-            InfoRow(title: 'Casa', value: character.house),
-            InfoRow(title: 'Fecha de nacimiento', value: character.dateOfBirth),
-            InfoRow(title: 'Mago/Bruja', value: character.wizard ? 'Sí' : 'No'),
-            InfoRow(title: 'Ascendencia', value: character.ancestry),
-            InfoRow(title: 'Estudiante de Hogwarts', value: character.hogwartsStudent ? 'Sí' : 'No'),
-            InfoRow(title: 'Personal de Hogwarts', value: character.hogwartsStaff ? 'Sí' : 'No'),
-            InfoRow(title: 'Estado', value: character.alive ? 'Vivo' : 'Fallecido'),
           ],
         ),
       ),
@@ -173,9 +191,9 @@ class InfoRow extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              value.isEmpty ? 'Desconocido' : value,
+              value.isEmpty ? 'NaN' : value,
               style: TextStyle(
-                color: value.isEmpty ? Colors.black38 : Colors.black,
+                color: value.isEmpty ? Colors.red : Colors.black,
               ),
             ),
           ),
@@ -183,4 +201,4 @@ class InfoRow extends StatelessWidget {
       ),
     );
   }
-} 
+}
